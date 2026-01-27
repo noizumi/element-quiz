@@ -579,6 +579,11 @@ function PeriodicTableModal(props) {
 
   // 初期は「だいたい全体が見える」くらい。必要なら調整OK。
   const [zoom, setZoom] = useState(0.35);
+  const ZOOM_STEP = 0.05;
+  
+  function snapToStep(v) {
+    return Math.round(v / ZOOM_STEP) * ZOOM_STEP;
+  }
 
   function setZoomSafe(v) {
     setZoom(clamp(v, 0.2, 1.6));
@@ -586,12 +591,12 @@ function PeriodicTableModal(props) {
 
   function dec() {
     setZoom(function (z) {
-      return clamp(Math.round((z - 0.1) * 100) / 100, 0.2, 1.6);
+      return clamp(Math.round((z - ZOOM_STEP) * 100) / 100, 0.2, 1.6);
     });
   }
   function inc() {
     setZoom(function (z) {
-      return clamp(Math.round((z + 0.1) * 100) / 100, 0.2, 1.6);
+      return clamp(Math.round((z + ZOOM_STEP) * 100) / 100, 0.2, 1.6);
     });
   }
 
