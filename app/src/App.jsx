@@ -447,9 +447,8 @@ function PeriodicCellButton(props) {
   if (flashKind === "wrong") {
     styleObj.outline = "2px solid rgba(251,113,133,0.95)";
     styleObj.outlineOffset = "-2px";
-    styleObj.boxShadow = "0 0 0 4px rgba(251,113,133,0.22)";
+    styleObj.boxShadow = "0 0 0 4px rgba(43, 35, 36, 0.22)";
   }
-
   return (
     <button
       type="button"
@@ -572,6 +571,168 @@ function HelpModal(props) {
     </motion.div>
   );
 }
+
+function PeriodicTableModal(props) {
+  const onClose = props.onClose;
+  const imgSrc = props.imgSrc;
+  const baseWidthPx = props.baseWidthPx;
+
+  // 初期は「だいたい全体が見える」くらい。必要なら調整OK。
+  const [zoom, setZoom] = useState(0.35);
+
+  function setZoomSafe(v) {
+    setZoom(clamp(v, 0.2, 1.6));
+  }
+
+  function dec() {
+    setZoom(function (z) {
+      return clamp(Math.round((z - 0.1) * 100) / 100, 0.2, 1.6);
+    });
+  }
+  function inc() {
+    setZoom(function (z) {
+      return clamp(Math.round((z + 0.1) * 100) / 100, 0.2, 1.6);
+    });
+  }
+
+  function openExternal() {
+    // 外部の高機能周期表（軽め・日本語対応）
+    const url = "https://artsexperiments.withgoogle.com/periodic-table/?exp=true&lang=ja";
+    try {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  const pct = String(Math.round(zoom * 100)) + "%";
+  const wPx = Math.max(200, Math.round(baseWidthPx * zoom));
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[70] flex items-center justify-center p-5"
+      role="dialog"
+      aria-modal="true"
+      aria-label="周期表"
+      onClick={function () {
+        onClose();
+      }}
+    >
+      <div className="absolute inset-0 bg-black/60" aria-hidden="true" />
+
+      <motion.div
+        initial={{ y: 10, scale: 0.98 }}
+        animate={{ y: 0, scale: 1 }}
+        exit={{ y: 10, scale: 0.98 }}
+        className="relative w-full max-w-4xl rounded-3xl border border-white/10 bg-slate-950/85 p-4 shadow-xl backdrop-blur-xl"
+        onClick={function (e) {
+          e.stopPropagation();
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-white/70">周期表</div>
+            <div className="text-lg font-black tracking-tight text-white">
+              拡大して確認できます
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={function () {
+                openExternal();
+              }}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-white/80 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+            >
+              高機能版（外部）
+            </button>
+
+            <button
+              type="button"
+              onClick={function () {
+                onClose();
+              }}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-white/80 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+            >
+              とじる
+            </button>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs text-white/60">
+            操作：＋/−で拡大縮小、画像はスクロールで移動
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={function () {
+                setZoomSafe(0.35);
+              }}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-white/80 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+            >
+              初期
+            </button>
+
+            <button
+              type="button"
+              onClick={function () {
+                setZoomSafe(1);
+              }}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-white/80 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+            >
+              100%
+            </button>
+
+            <button
+              type="button"
+              onClick={dec}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-white/80 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+            >
+              −
+            </button>
+
+            <div className="min-w-[52px] text-center text-xs font-black text-white/80">
+              {pct}
+            </div>
+
+            <button
+              type="button"
+              onClick={inc}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-white/80 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+            >
+              ＋
+            </button>
+          </div>
+        </div>
+
+        {/* Image area */}
+        <div className="mt-3 h-[72vh] overflow-auto rounded-2xl border border-white/10 bg-black/20">
+          <img
+            src={imgSrc}
+            alt="元素周期表"
+            draggable={false}
+            loading="lazy"
+            style={{
+              width: String(wPx) + "px",
+              height: "auto",
+              display: "block",
+              maxWidth: "none",
+            }}
+          />
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 
 function ModeCard(props) {
   const title = props.title;
@@ -773,6 +934,13 @@ export default function App() {
   const [lastReview, setLastReview] = useState(null);
 
   const [showHelp, setShowHelp] = useState(false);
+
+  // ===== Periodic table image (public/) =====
+  const PT_IMAGE_VERSION = "2026-01-26"; // 画像差し替え時に変更（キャッシュ回避）
+  const PT_IMAGE_SRC = "/periodic-table.png?v=" + PT_IMAGE_VERSION;
+  const PT_IMAGE_BASE_W = 2048; // 画像の元の幅（今回のPNGは2048px幅）
+
+  const [showPeriodicTable, setShowPeriodicTable] = useState(false);
 
   const [bestByMode, setBestByMode] = useState(function () {
     return {};
@@ -1427,6 +1595,17 @@ export default function App() {
                   </div>
                 </div>
 
+                <div className="mt-3">
+                  <ActionButton
+                    variant="secondary"
+                    onClick={function () {
+                      setShowPeriodicTable(true);
+                    }}
+                  >
+                    周期表を見る
+                  </ActionButton>
+                </div>
+
                 <div className="mt-4 text-xs font-semibold text-white/60">
                   モードをえらぶ
                 </div>
@@ -1921,6 +2100,18 @@ export default function App() {
             <HelpModal
               onClose={function () {
                 setShowHelp(false);
+              }}
+            />
+          ) : null}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showPeriodicTable ? (
+            <PeriodicTableModal
+              imgSrc={PT_IMAGE_SRC}
+              baseWidthPx={PT_IMAGE_BASE_W}
+              onClose={function () {
+                setShowPeriodicTable(false);
               }}
             />
           ) : null}
