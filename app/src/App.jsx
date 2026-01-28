@@ -578,7 +578,7 @@ function PeriodicTableModal(props) {
   const baseWidthPx = props.baseWidthPx;
 
   // 初期は「だいたい全体が見える」くらい。必要なら調整OK。
-  const [zoom, setZoom] = useState(0.35);
+  const [zoom, setZoom] = useState(0.40);
   const ZOOM_STEP = 0.05;
   
   function snapToStep(v) {
@@ -642,7 +642,7 @@ function PeriodicTableModal(props) {
           <div>
             <div className="text-sm font-semibold text-white/70">周期表</div>
             <div className="text-lg font-black tracking-tight text-white">
-              拡大して確認できます
+              拡大可
             </div>
           </div>
 
@@ -720,18 +720,23 @@ function PeriodicTableModal(props) {
 
         {/* Image area */}
         <div className="mt-3 h-[72vh] overflow-auto rounded-2xl border border-white/10 bg-black/20">
-          <img
-            src={imgSrc}
-            alt="元素周期表"
-            draggable={false}
-            loading="lazy"
-            style={{
-              width: String(wPx) + "px",
-              height: "auto",
-              display: "block",
-              maxWidth: "none",
-            }}
-          />
+          <div
+            className="min-h-full min-w-full flex items-center justify-center"
+            style={{ padding: "16px" }}
+          >
+            <img
+              src={imgSrc}
+              alt="元素周期表"
+              draggable={false}
+              loading="lazy"
+              style={{
+                width: String(wPx) + "px",
+                height: "auto",
+                display: "block",
+                maxWidth: "none",
+              }}
+            />
+          </div>
         </div>
       </motion.div>
     </motion.div>
@@ -1771,7 +1776,15 @@ export default function App() {
                             : "text-4xl"
                           : isQuizCompact
                             ? "text-5xl"
-                            : "text-6xl")
+                            : "text-6xl") +
+                        (mode === MODES.ELEMENT_NAME
+                          ? " whitespace-nowrap overflow-hidden text-ellipsis [text-wrap:nowrap]"
+                          : "")
+                      }
+                      style={
+                        mode === MODES.ELEMENT_NAME
+                          ? { fontSize: "clamp(1.8rem, 6vw, 3.75rem)" }
+                          : undefined
                       }
                     >
                       {promptMainText}
