@@ -679,7 +679,7 @@ function PeriodicTableModal(props) {
             <button
               type="button"
               onClick={function () {
-                setZoomSafe(0.35);
+                setZoomSafe(0.40);
               }}
               className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-white/80 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
             >
