@@ -720,22 +720,27 @@ function PeriodicTableModal(props) {
 
         {/* Image area */}
         <div className="mt-3 h-[72vh] overflow-auto rounded-2xl border border-white/10 bg-black/20">
-          <div
-            className="min-h-full min-w-full flex items-center justify-center"
-            style={{ padding: "16px" }}
-          >
-            <img
-              src={imgSrc}
-              alt="元素周期表"
-              draggable={false}
-              loading="lazy"
+          <div className="min-h-full p-4">
+            {/* 画像が小さい時だけ中央寄せ（大きい時は左寄せになってスクロールが正常に） */}
+            <div
+              className="mx-auto"
               style={{
                 width: String(wPx) + "px",
-                height: "auto",
-                display: "block",
-                maxWidth: "none",
               }}
-            />
+            >
+              <img
+                src={imgSrc}
+                alt="元素周期表"
+                draggable={false}
+                loading="lazy"
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  display: "block",
+                  maxWidth: "none",
+                }}
+              />
+            </div>
           </div>
         </div>
       </motion.div>
