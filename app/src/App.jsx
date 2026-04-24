@@ -952,6 +952,8 @@ export default function App() {
   const [madeMistakeThisQuestion, setMadeMistakeThisQuestion] = useState(false);
 
   const startMsRef = useRef(null);
+  const pauseStartRef = useRef(null);
+  const totalPausedMsRef = useRef(0);
 
   const [lastResult, setLastResult] = useState(null);
   const [lastReview, setLastReview] = useState(null);
@@ -981,6 +983,24 @@ export default function App() {
   // self tests
   useEffect(function () {
     runSelfTests();
+  }, []);
+
+  // バックグラウンド中の経過時間を除外するため、非表示区間を累積する
+  useEffect(function () {
+    function onVisibilityChange() {
+      if (document.hidden) {
+        pauseStartRef.current = performance.now();
+      } else {
+        if (pauseStartRef.current != null) {
+          totalPausedMsRef.current += performance.now() - pauseStartRef.current;
+          pauseStartRef.current = null;
+        }
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return function () {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   function refreshBestFromStorage() {
@@ -1111,6 +1131,7 @@ export default function App() {
   function buildQuestion(nextIndex, nextOrder) {
     const baseOrder = nextOrder || order;
     const z = baseOrder[nextIndex];
+    if (!z) return;
     const correct = ELEMENTS[z - 1].symbol;
 
     if (mode === MODES.PERIODIC_TABLE) {
@@ -1141,6 +1162,8 @@ export default function App() {
     setCellFlash(null);
     setSymFlash(null);
     startMsRef.current = null;
+    totalPausedMsRef.current = 0;
+    pauseStartRef.current = null;
   }
 
   function startMain(selectedMode) {
@@ -1343,7 +1366,7 @@ export default function App() {
     if (phase === "main") {
       const endMs = performance.now();
       const startMs = startMsRef.current == null ? endMs : startMsRef.current;
-      const sec = (endMs - startMs) / 1000;
+      const sec = (endMs - startMs - totalPausedMsRef.current) / 1000;
       const safe = clamp(sec, 0, 9999);
       const missedZs = Array.from(missedSet);
 
