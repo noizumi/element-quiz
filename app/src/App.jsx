@@ -19,6 +19,9 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
+// オーバーレイのフェードアウト時間(ms)。Overlay の transition duration と合わせること
+var OVERLAY_EXIT_MS = 180;
+
 function shuffle(array) {
   const a = array.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -489,16 +492,21 @@ function Overlay(props) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.98 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/30"
       role="status"
       aria-live="polite"
     >
-      <div
+      <motion.div
+        initial={{ scale: 0.97, y: 6 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.97, y: 6 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
         className={
-          "w-full max-w-sm rounded-3xl border backdrop-blur-xl " + styles[kind]
+          "w-full max-w-sm rounded-3xl border backdrop-blur-md " + styles[kind]
         }
       >
         <div className="px-6 py-8 text-center">
@@ -507,7 +515,7 @@ function Overlay(props) {
           </div>
           <div className="mt-2 text-sm text-white/70">{subText}</div>
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -1383,21 +1391,26 @@ export default function App() {
     window.setTimeout(function () {
       setOverlay(null);
       const next = qIndex + 1;
-      if (next >= order.length) {
-        setOverlay({
-          kind: "finish",
-          text: phase === "main" ? "終了！" : "復習完了！",
-          subText: phase === "main" ? "" : "結果を見てみよう",
-        });
-        window.setTimeout(function () {
-          setOverlay(null);
-          finalizeSession();
-        }, 900);
-      } else {
-        setQIndex(next);
-        buildQuestion(next);
-      }
-    }, 650);
+      // フェードアウトが完了してからコンテンツを切り替える
+      window.setTimeout(function () {
+        if (next >= order.length) {
+          setOverlay({
+            kind: "finish",
+            text: phase === "main" ? "終了！" : "復習完了！",
+            subText: phase === "main" ? "" : "結果を見てみよう",
+          });
+          window.setTimeout(function () {
+            setOverlay(null);
+            window.setTimeout(function () {
+              finalizeSession();
+            }, OVERLAY_EXIT_MS);
+          }, 900);
+        } else {
+          setQIndex(next);
+          buildQuestion(next);
+        }
+      }, OVERLAY_EXIT_MS);
+    }, 550);
   }
 
   function blurActiveElement() {
