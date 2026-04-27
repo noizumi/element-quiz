@@ -1372,7 +1372,7 @@ export default function App() {
 
       const prev = readBestRecord(mode);
       const prevSec = prev ? prev.sec : null;
-      const isNewBest = prevSec == null ? true : safe < prevSec;
+      const isNewBest = wrongCount < 10 && (prevSec == null ? true : safe < prevSec);
 
       if (isNewBest) {
         writeBestRecord(mode, safe);
