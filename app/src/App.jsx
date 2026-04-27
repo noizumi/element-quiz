@@ -163,7 +163,7 @@ const ELEMENTS = [
   { z: 118, symbol: "Og" },
 ];
 
-// 1〜20の日本語元素名
+// 1〜38の日本語元素名（21〜38はボーナスモード用）
 const NAME_JA_1_20 = {
   1: "水素",
   2: "ヘリウム",
@@ -185,6 +185,24 @@ const NAME_JA_1_20 = {
   18: "アルゴン",
   19: "カリウム",
   20: "カルシウム",
+  21: "スカンジウム",
+  22: "チタン",
+  23: "バナジウム",
+  24: "クロム",
+  25: "マンガン",
+  26: "鉄",
+  27: "コバルト",
+  28: "ニッケル",
+  29: "銅",
+  30: "亜鉛",
+  31: "ガリウム",
+  32: "ゲルマニウム",
+  33: "ヒ素",
+  34: "セレン",
+  35: "臭素",
+  36: "クリプトン",
+  37: "ルビジウム",
+  38: "ストロンチウム",
 };
 
 function nameJaForZ(z) {
@@ -196,28 +214,75 @@ const MODES = {
   ATOMIC_NUMBER: "atomic_number",
   ELEMENT_NAME: "element_name",
   PERIODIC_TABLE: "periodic_table",
+  BONUS_ATOMIC_NUMBER: "bonus_atomic_number",
+  BONUS_ELEMENT_NAME: "bonus_element_name",
+  BONUS_PERIODIC_TABLE: "bonus_periodic_table",
 };
 
+const BASE_MODES = [
+  MODES.ATOMIC_NUMBER,
+  MODES.ELEMENT_NAME,
+  MODES.PERIODIC_TABLE,
+];
+
+const BONUS_MODES = [
+  MODES.BONUS_ATOMIC_NUMBER,
+  MODES.BONUS_ELEMENT_NAME,
+];
+
+function modeIsBonus(mode) {
+  return BONUS_MODES.indexOf(mode) >= 0;
+}
+
+function modeBaseType(mode) {
+  if (mode === MODES.BONUS_ATOMIC_NUMBER) return MODES.ATOMIC_NUMBER;
+  if (mode === MODES.BONUS_ELEMENT_NAME) return MODES.ELEMENT_NAME;
+  if (mode === MODES.BONUS_PERIODIC_TABLE) return MODES.PERIODIC_TABLE;
+  return mode;
+}
+
+function modeRange(mode) {
+  if (modeIsBonus(mode)) return { start: 21, end: 38 };
+  return { start: 1, end: 20 };
+}
+
 function modeMeta(mode) {
-  if (mode === MODES.ELEMENT_NAME) {
+  const base = modeBaseType(mode);
+  const isBonus = modeIsBonus(mode);
+  const bonusPrefix = isBonus ? "ボーナス：" : "";
+  const bonusDetailSuffix = isBonus ? "（21〜38）" : "";
+  if (base === MODES.ELEMENT_NAME) {
     return {
-      title: "元素名モード",
-      detail: "元素名に合う元素記号をタップ",
+      title: bonusPrefix + "元素名モード",
+      detail: "元素名に合う元素記号をタップ" + bonusDetailSuffix,
       quizPrompt: "この元素の元素記号は？",
     };
   }
-  if (mode === MODES.PERIODIC_TABLE) {
+  if (base === MODES.PERIODIC_TABLE) {
     return {
-      title: "周期表モード",
-      detail: "周期表で、正しいマスをタップ",
+      title: bonusPrefix + "周期表モード",
+      detail: "周期表で、正しいマスをタップ" + bonusDetailSuffix,
       quizPrompt: "周期表で場所をタップ",
     };
   }
   return {
-    title: "原子番号モード",
-    detail: "原子番号に合う元素記号をタップ",
+    title: bonusPrefix + "原子番号モード",
+    detail: "原子番号に合う元素記号をタップ" + bonusDetailSuffix,
     quizPrompt: "この原子番号の元素記号は？",
   };
+}
+
+function hasSGradeForMode(bestByMode, mode) {
+  const rec = bestByMode && bestByMode[mode];
+  if (!rec || typeof rec.sec !== "number" || !isFinite(rec.sec)) return false;
+  return rec.sec <= 60;
+}
+
+function isBonusUnlocked(bestByMode) {
+  for (let i = 0; i < BASE_MODES.length; i++) {
+    if (!hasSGradeForMode(bestByMode, BASE_MODES[i])) return false;
+  }
+  return true;
 }
 
 function gradeForSeconds(sec) {
@@ -302,20 +367,30 @@ function clearAllBestRecords() {
   }
 }
 
-function sampleDistinctSymbols(count, excludeSymbol) {
-  const pool = ELEMENTS.map(function (e) {
-    return e.symbol;
-  }).filter(function (s) {
-    return s !== excludeSymbol;
-  });
+function sampleDistinctSymbols(count, excludeSymbol, zRange) {
+  // zRange を指定しない場合は全 ELEMENTS から抽出。
+  // 指定された場合はその原子番号範囲（[start, end] 両端含む）からのみ抽出する。
+  const source = zRange
+    ? ELEMENTS.slice(zRange.start - 1, zRange.end)
+    : ELEMENTS;
+  const pool = source
+    .map(function (e) {
+      return e.symbol;
+    })
+    .filter(function (s) {
+      return s !== excludeSymbol;
+    });
   const shuffled = shuffle(pool);
   return shuffled.slice(0, count);
 }
 
 /**
- * 周期表（1〜20, 遷移元素3〜12族を除く）
+ * 周期表
+ *  - 通常モード（1〜20）: 3〜12族を除いた8列レイアウト
+ *  - ボーナスモード（21〜38）: 全1〜18族の18列レイアウト
  */
 const PT_GROUP_COLUMNS = [1, 2, 13, 14, 15, 16, 17, 18];
+const PT_GROUP_COLUMNS_FULL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 const PT_POS_1_20 = {
   1: { period: 1, group: 1 },
   2: { period: 1, group: 18 },
@@ -337,10 +412,29 @@ const PT_POS_1_20 = {
   18: { period: 3, group: 18 },
   19: { period: 4, group: 1 },
   20: { period: 4, group: 2 },
+  21: { period: 4, group: 3 },
+  22: { period: 4, group: 4 },
+  23: { period: 4, group: 5 },
+  24: { period: 4, group: 6 },
+  25: { period: 4, group: 7 },
+  26: { period: 4, group: 8 },
+  27: { period: 4, group: 9 },
+  28: { period: 4, group: 10 },
+  29: { period: 4, group: 11 },
+  30: { period: 4, group: 12 },
+  31: { period: 4, group: 13 },
+  32: { period: 4, group: 14 },
+  33: { period: 4, group: 15 },
+  34: { period: 4, group: 16 },
+  35: { period: 4, group: 17 },
+  36: { period: 4, group: 18 },
+  37: { period: 5, group: 1 },
+  38: { period: 5, group: 2 },
 };
 
-function ptColForGroup(group) {
-  const idx = PT_GROUP_COLUMNS.indexOf(group);
+function ptColForGroup(group, columns) {
+  const cols = columns || PT_GROUP_COLUMNS;
+  const idx = cols.indexOf(group);
   return idx >= 0 ? idx + 1 : null;
 }
 
@@ -348,34 +442,38 @@ function ptCellKey(period, col) {
   return String(period) + "-" + String(col);
 }
 
-const PT_CELL_BY_POS = (function () {
+function buildPtCellMap(zStart, zEnd, columns) {
   const map = new Map();
-  for (let z = 1; z <= 20; z++) {
+  for (let z = zStart; z <= zEnd; z++) {
     const pos = PT_POS_1_20[z];
     if (!pos) continue;
-    const col = ptColForGroup(pos.group);
+    const col = ptColForGroup(pos.group, columns);
     if (!col) continue;
     map.set(ptCellKey(pos.period, col), z);
   }
   return map;
-})();
+}
 
-function ptZAt(period, col) {
-  const v = PT_CELL_BY_POS.get(ptCellKey(period, col));
+const PT_CELL_BY_POS = buildPtCellMap(1, 20, PT_GROUP_COLUMNS);
+const PT_CELL_BY_POS_BONUS = buildPtCellMap(21, 38, PT_GROUP_COLUMNS_FULL);
+
+function ptZAt(period, col, cellMap) {
+  const map = cellMap || PT_CELL_BY_POS;
+  const v = map.get(ptCellKey(period, col));
   return isNil(v) ? null : v;
 }
 
-function ptHasCell(period, col) {
-  return ptZAt(period, col) != null;
+function ptHasCell(period, col, cellMap) {
+  return ptZAt(period, col, cellMap) != null;
 }
 
-function ptBorderClasses(period, col) {
+function ptBorderClasses(period, col, cellMap) {
   // マスの枠線。スマホの流体グリッドでも確実に視認できるよう、border を使用。
   // 共有辺は左/上を消して二重線を避ける。
-  if (!ptHasCell(period, col)) return "";
+  if (!ptHasCell(period, col, cellMap)) return "";
   let cls = "border border-white/25";
-  if (ptHasCell(period, col - 1)) cls += " border-l-0";
-  if (ptHasCell(period - 1, col)) cls += " border-t-0";
+  if (ptHasCell(period, col - 1, cellMap)) cls += " border-l-0";
+  if (ptHasCell(period - 1, col, cellMap)) cls += " border-t-0";
   return cls;
 }
 
@@ -769,7 +867,7 @@ function ModeCard(props) {
 
   // Tailwindの動的クラスが消えないようにサーフェス
   const safelist =
-    "border-cyan-400/30 border-violet-400/30 border-amber-400/30 bg-cyan-500/10 bg-violet-500/10 bg-amber-500/10 focus-visible:ring-cyan-300/40 focus-visible:ring-violet-300/40 focus-visible:ring-amber-300/40";
+    "border-cyan-400/30 border-violet-400/30 border-amber-400/30 border-rose-400/30 bg-cyan-500/10 bg-violet-500/10 bg-amber-500/10 bg-rose-500/10 focus-visible:ring-cyan-300/40 focus-visible:ring-violet-300/40 focus-visible:ring-amber-300/40 focus-visible:ring-rose-300/40";
 
   return (
     <motion.button
@@ -1005,12 +1103,12 @@ export default function App() {
 
   function refreshBestFromStorage() {
     const next = {};
-    const a = readBestRecord(MODES.ATOMIC_NUMBER);
-    const n = readBestRecord(MODES.ELEMENT_NAME);
-    const p = readBestRecord(MODES.PERIODIC_TABLE);
-    if (a) next[MODES.ATOMIC_NUMBER] = a;
-    if (n) next[MODES.ELEMENT_NAME] = n;
-    if (p) next[MODES.PERIODIC_TABLE] = p;
+    const allModes = BASE_MODES.concat(BONUS_MODES);
+    for (let i = 0; i < allModes.length; i++) {
+      const m = allModes[i];
+      const rec = readBestRecord(m);
+      if (rec) next[m] = rec;
+    }
     setBestByMode(next);
   }
 
@@ -1042,7 +1140,7 @@ export default function App() {
     [currentZ]
   );
 
-  const isPeriodic = mode === MODES.PERIODIC_TABLE;
+  const isPeriodic = modeBaseType(mode) === MODES.PERIODIC_TABLE;
   const isQuizPeriodic = screen === "quiz" && isPeriodic;
 
   // 画面が低い端末（アドレスバー表示中のiPadなど）ではコンパクト表示
@@ -1059,9 +1157,19 @@ export default function App() {
   // スマホ相当では、JSでpx固定レイアウトを詰めても端末の丸め誤差で
   // 右端が欠けたり横スクロールが出ることがあるため、幅100%の流体グリッドに切り替える。
   // さらにPC（fine pointer）では、初回計測とスクロールバー出現のタイミング差で
-  // 右端が見切れることがあるため、同様に流体グリッドを使って常にフィットさせる。
+  // 周期表モードのレイアウト情報
+  const ptIsBonus = modeIsBonus(mode);
+  const ptColumns = ptIsBonus ? PT_GROUP_COLUMNS_FULL : PT_GROUP_COLUMNS;
+  const ptColCount = ptColumns.length;
+  const ptCellMap = ptIsBonus ? PT_CELL_BY_POS_BONUS : PT_CELL_BY_POS;
+  const ptPeriodStart = ptIsBonus ? 4 : 1;
+  const ptPeriodEnd = ptIsBonus ? 5 : 4;
+
+  // 右端が見切れることがあるため、流体グリッドを使って常にフィットさせる。
   // iPad等のタッチ主体（coarse pointer, phone以外）はタップしやすさ優先でpx固定を維持。
-  const ptIsFluid = isQuizPeriodic && (isPhoneLike || !isCoarsePointer);
+  // ボーナス（18列）は1セルが小さくなりすぎるため、常にpx固定＋横スクロールを許容する。
+  const ptIsFluid =
+    isQuizPeriodic && (isPhoneLike || !isCoarsePointer) && !ptIsBonus;
 
   // 周期表モードはタップしやすさ優先でセルを大きめに。
   // ただし、画面幅が足りない場合はカード幅に合わせて縮小し、横スクロールを回避。
@@ -1091,11 +1199,11 @@ export default function App() {
   const ptFitSafetyPx = isPhoneLike ? 22 : 6;
   const ptFitCellPx =
     ptWrapWidth > 0
-      ? Math.floor((ptWrapWidth - ptLabelColPx - ptFitSafetyPx) / 8)
+      ? Math.floor((ptWrapWidth - ptLabelColPx - ptFitSafetyPx) / ptColCount)
       : ptMaxCellPx;
 
   const ptCellPx = clamp(ptFitCellPx, ptMinCellPx, ptMaxCellPx);
-  const ptGridWidth = ptLabelColPx + 8 * ptCellPx;
+  const ptGridWidth = ptLabelColPx + ptColCount * ptCellPx;
   const ptAllowScroll = ptIsFluid
     ? false
     : ptWrapWidth > 0
@@ -1113,8 +1221,9 @@ export default function App() {
   const promptMainText = useMemo(
     function () {
       if (!currentZ) return "";
-      if (mode === MODES.ELEMENT_NAME) return nameJaForZ(currentZ);
-      if (mode === MODES.PERIODIC_TABLE) return coalesce(correctSymbol, "");
+      const base = modeBaseType(mode);
+      if (base === MODES.ELEMENT_NAME) return nameJaForZ(currentZ);
+      if (base === MODES.PERIODIC_TABLE) return coalesce(correctSymbol, "");
       return String(currentZ);
     },
     [mode, currentZ, correctSymbol]
@@ -1134,7 +1243,7 @@ export default function App() {
     if (!z) return;
     const correct = ELEMENTS[z - 1].symbol;
 
-    if (mode === MODES.PERIODIC_TABLE) {
+    if (modeBaseType(mode) === MODES.PERIODIC_TABLE) {
       setOptions([]);
       setDisabledSet(new Set());
       setMadeMistakeThisQuestion(false);
@@ -1143,7 +1252,7 @@ export default function App() {
       return;
     }
 
-    const distractors = sampleDistinctSymbols(7, correct);
+    const distractors = sampleDistinctSymbols(7, correct, modeRange(mode));
     const opts = shuffle([correct, ...distractors]);
     setOptions(opts);
     setDisabledSet(new Set());
@@ -1172,9 +1281,11 @@ export default function App() {
     setPhase("main");
     setLastReview(null);
 
+    const range = modeRange(m);
+    const length = range.end - range.start + 1;
     const o = shuffle(
-      Array.from({ length: 20 }, function (_, i) {
-        return i + 1;
+      Array.from({ length: length }, function (_, i) {
+        return range.start + i;
       })
     );
     setOrder(o);
@@ -1606,8 +1717,17 @@ export default function App() {
             ) : null}
           </div>
           <div className="flex gap-2">
-            <Pill>20問</Pill>
-            <Pill>1〜20</Pill>
+            {(function () {
+              const isBonus = screen !== "home" && modeIsBonus(mode);
+              const range = isBonus ? "21〜38" : "1〜20";
+              const count = isBonus ? "18問" : "20問";
+              return (
+                <>
+                  <Pill>{count}</Pill>
+                  <Pill>{range}</Pill>
+                </>
+              );
+            })()}
           </div>
         </div>
 
@@ -1692,9 +1812,37 @@ export default function App() {
                   <BestSummaryCard bestByMode={bestByMode} />
                 </div>
 
-                <div className="mt-4 text-center text-xs text-white/45">
-                  全モードでＳ評価を取って先生に見せるといいことがあるかも……？
-                </div>
+                {isBonusUnlocked(bestByMode) ? (
+                  <>
+                    <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-rose-200">
+                      <span>★ ボーナスモード解放！（21〜38）</span>
+                    </div>
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <ModeCard
+                        title="ボーナス：原子番号モード"
+                        detail="21〜38の原子番号で挑戦"
+                        accent="rose"
+                        onClick={function () {
+                          startMain(MODES.BONUS_ATOMIC_NUMBER);
+                        }}
+                      />
+
+                      <ModeCard
+                        title="ボーナス：元素名モード"
+                        detail="21〜38の元素名で挑戦"
+                        accent="rose"
+                        onClick={function () {
+                          startMain(MODES.BONUS_ELEMENT_NAME);
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-4 text-center text-xs text-white/45">
+                    全モードでＳ評価を取って先生に見せるといいことがあるかも……？
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -1781,7 +1929,7 @@ export default function App() {
                 {/* prompt */}
                 <div
                   className={
-                    (mode === MODES.PERIODIC_TABLE
+                    (modeBaseType(mode) === MODES.PERIODIC_TABLE
                       ? isQuizCompact
                         ? "mt-3"
                         : "mt-4"
@@ -1811,19 +1959,19 @@ export default function App() {
                     <div
                       className={
                         "text-center font-black tracking-tight " +
-                        (mode === MODES.PERIODIC_TABLE
+                        (modeBaseType(mode) === MODES.PERIODIC_TABLE
                           ? isQuizCompact
                             ? "text-3xl"
                             : "text-4xl"
                           : isQuizCompact
                             ? "text-5xl"
                             : "text-6xl") +
-                        (mode === MODES.ELEMENT_NAME
+                        (modeBaseType(mode) === MODES.ELEMENT_NAME
                           ? " whitespace-nowrap overflow-hidden text-ellipsis [text-wrap:nowrap]"
                           : "")
                       }
                       style={
-                        mode === MODES.ELEMENT_NAME
+                        modeBaseType(mode) === MODES.ELEMENT_NAME
                           ? { fontSize: "clamp(1.8rem, 6vw, 3.75rem)" }
                           : undefined
                       }
@@ -1898,13 +2046,17 @@ export default function App() {
                                 ? {
                                     gridTemplateColumns:
                                       String(ptLabelColPx) +
-                                      "px repeat(8, minmax(0, 1fr))",
+                                      "px repeat(" +
+                                      String(ptColCount) +
+                                      ", minmax(0, 1fr))",
                                   }
                                 : {
                                     width: String(ptGridWidth) + "px",
                                     gridTemplateColumns:
                                       String(ptLabelColPx) +
-                                      "px repeat(8," +
+                                      "px repeat(" +
+                                      String(ptColCount) +
+                                      "," +
                                       String(ptCellPx) +
                                       "px)",
                                   }
@@ -1912,7 +2064,7 @@ export default function App() {
                           >
                             {/* group labels */}
                             <div className="h-5" aria-hidden="true" />
-                            {PT_GROUP_COLUMNS.map(function (g) {
+                            {ptColumns.map(function (g) {
                               return (
                                 <div
                                   key={"g-" + String(g)}
@@ -1926,7 +2078,11 @@ export default function App() {
                             {/* periods + cells */}
                             {(() => {
                               const nodes = [];
-                              for (let period = 1; period <= 4; period++) {
+                              for (
+                                let period = ptPeriodStart;
+                                period <= ptPeriodEnd;
+                                period++
+                              ) {
                                 nodes.push(
                                   <div
                                     key={"p-" + String(period)}
@@ -1948,8 +2104,8 @@ export default function App() {
                                   </div>
                                 );
 
-                                for (let col = 1; col <= 8; col++) {
-                                  const z = ptZAt(period, col);
+                                for (let col = 1; col <= ptColCount; col++) {
+                                  const z = ptZAt(period, col, ptCellMap);
                                   if (!z) {
                                     nodes.push(
                                       <div
@@ -1970,7 +2126,7 @@ export default function App() {
                                     continue;
                                   }
 
-                                  const group = PT_GROUP_COLUMNS[col - 1];
+                                  const group = ptColumns[col - 1];
                                   const ariaLabel =
                                     "第" +
                                     String(period) +
@@ -1990,7 +2146,11 @@ export default function App() {
                                         onClick={function () {
                                           handlePickCell(z);
                                         }}
-                                        borderClass={ptBorderClasses(period, col)}
+                                        borderClass={ptBorderClasses(
+                                          period,
+                                          col,
+                                          ptCellMap
+                                        )}
                                         ariaLabel={ariaLabel}
                                         flashKind={
                                           cellFlash && cellFlash.z === z
