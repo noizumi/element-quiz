@@ -228,7 +228,6 @@ const BASE_MODES = [
 const BONUS_MODES = [
   MODES.BONUS_ATOMIC_NUMBER,
   MODES.BONUS_ELEMENT_NAME,
-  MODES.BONUS_PERIODIC_TABLE,
 ];
 
 function modeIsBonus(mode) {
@@ -1835,15 +1834,6 @@ export default function App() {
                         accent="rose"
                         onClick={function () {
                           startMain(MODES.BONUS_ELEMENT_NAME);
-                        }}
-                      />
-
-                      <ModeCard
-                        title="ボーナス：周期表モード"
-                        detail="21〜38を周期表でタップ"
-                        accent="rose"
-                        onClick={function () {
-                          startMain(MODES.BONUS_PERIODIC_TABLE);
                         }}
                       />
                     </div>
