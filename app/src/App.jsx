@@ -2039,7 +2039,11 @@ export default function App() {
 
                   {phase === "main" && result ? (
                     <div className="mt-4">
-                      {lastResult && lastResult.isNewBest ? (
+                      {lastResult && lastResult.wrongCount >= 10 ? (
+                        <div className="mb-3 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm font-black text-amber-200">
+                          ミスが多いため記録されませんでした
+                        </div>
+                      ) : lastResult && lastResult.isNewBest ? (
                         <div className="mb-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm font-black text-emerald-200">
                           ベスト更新！
                         </div>
