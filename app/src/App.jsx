@@ -286,6 +286,14 @@ function isBonusUnlocked(bestByMode) {
 }
 
 function gradeForSeconds(sec) {
+  if (sec < 30) {
+    return {
+      grade: "SS",
+      title: "元素記号レジェンド!!!",
+      comment:
+        "30秒切りは伝説級！もはや元素記号と一体化した者のみが到達できる領域です。",
+    };
+  }
   if (sec <= 60) {
     return {
       grade: "S",
@@ -909,14 +917,21 @@ function BestSummaryCard(props) {
     const has = rec && typeof rec.sec === "number" && isFinite(rec.sec);
     const time = has ? formatSeconds(rec.sec) + "s" : "--.-s";
     const grade = has ? gradeForSeconds(rec.sec).grade : "-";
+    const isSS = has && grade === "SS";
+    const timeClass = isSS
+      ? "mt-1 text-sm font-black text-amber-300 [text-shadow:0_0_8px_rgba(251,191,36,0.55)]"
+      : "mt-1 text-sm font-black text-white/90";
+    const gradeClass = isSS
+      ? "mt-1 text-lg font-black text-amber-300 [text-shadow:0_0_10px_rgba(251,191,36,0.6)]"
+      : "mt-1 text-lg font-black text-white";
 
     return (
       <div className="flex flex-col items-center justify-center px-2 py-3">
         <div className="text-[10px] font-semibold text-white/60 whitespace-nowrap">
           {label}
         </div>
-        <div className="mt-1 text-sm font-black text-white/90">{time}</div>
-        <div className="mt-1 text-lg font-black text-white">{grade}</div>
+        <div className={timeClass}>{time}</div>
+        <div className={gradeClass}>{grade}</div>
       </div>
     );
   }
